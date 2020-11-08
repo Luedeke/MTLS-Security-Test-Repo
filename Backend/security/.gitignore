@@ -1,0 +1,9 @@
+/.metadata/
+/.idea/
+/.settings/
+/.sts4-cache/
+/target/
+.classpath
+.project
+auth.iml
+/.classpath

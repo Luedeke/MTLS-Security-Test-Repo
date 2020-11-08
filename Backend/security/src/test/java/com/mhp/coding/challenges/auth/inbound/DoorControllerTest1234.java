@@ -2,6 +2,9 @@ package com.mhp.coding.challenges.auth.inbound;
 
 import lombok.SneakyThrows;
 import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -9,12 +12,11 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.ssl.TrustStrategy;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
-import org.springframework.beans.factory.annotation.Value;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -27,7 +29,7 @@ import java.io.FileInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class DoorControllerTest {
+public class DoorControllerTest1234 {
 
     private static final String DOOR_ENDPOINT = "https://127.0.0.1:8090/v1/door";
 
@@ -110,7 +112,7 @@ public class DoorControllerTest {
     }
 
     @SneakyThrows
-    @Test(expected=SSLHandshakeException.class)
+    @Test
     public void test_change_door_state_revoke_unknown_certificate() throws Exception {
         // #Arrange
         HttpPost request = new HttpPost(DOOR_ENDPOINT);
@@ -120,8 +122,12 @@ public class DoorControllerTest {
 
         // #Act
         HttpClient httpClient = getSSLHttpClientWithUnknownUserCertificate();
-        httpClient.execute(request);
+        HttpResponse response = httpClient.execute(request);
+
+        // #Assert
+        assertEquals(401, response.getStatusLine().getStatusCode());
     }
+
 
     @SneakyThrows
     @Test(expected=SSLHandshakeException.class)
@@ -132,7 +138,7 @@ public class DoorControllerTest {
                 "Backend/security/src/main/resources/client-user.jks";
         String keyStoreUserNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
                 "Backend/security/src/main/resources/client-user.jks";
-        keyStore.load(new FileInputStream(keyStoreUserNB), keyPassphrase.toCharArray());
+        keyStore.load(new FileInputStream(keyStoreUser), keyPassphrase.toCharArray());
 
         // Create a trust manager that does not validate certificate chains
         TrustManager[] trustAllCerts = new TrustManager[] {
@@ -164,12 +170,22 @@ public class DoorControllerTest {
         String adminKeySTore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
                 "Backend/security/src/main/resources/client-admin.jks";
         String keyStoreUserNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-admin.jks";
+                "Backend/security/src/main/resources/client-user.jks";
+
+        // truststore
+        /*
+        KeyStore trustStore = KeyStore.getInstance("JKS";
+        trustStore.load(new FileInputStream(adminKeySTore), "123456".toCharArray());
+        String alg = KeyManagerFactory.getDefaultAlgorithm();
+        TrustManagerFactory fac = TrustManagerFactory.getInstance(alg);
+        fac.init(trustStore);
+        */
+
+
+        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        myTrustStore.load(new FileInputStream(keyStoreUserNB), "password".toCharArray());
 
         String keyPassphrase = "123456";
-        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        myTrustStore.load(new FileInputStream(keyStoreUserNB), keyPassphrase.toCharArray());
-
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(new FileInputStream(keyStoreUserNB), keyPassphrase.toCharArray());
 
@@ -187,16 +203,11 @@ public class DoorControllerTest {
         KeyStore keyStore = KeyStore.getInstance("JKS");
         String userKeyStore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
                 "Backend/security/src/main/resources/client-user.jks";
-        String userKeyStoreNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-user.jks";
-        keyStore.load(new FileInputStream(userKeyStoreNB), keyPassphrase.toCharArray());
-
-        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        myTrustStore.load(new FileInputStream(userKeyStoreNB), keyPassphrase.toCharArray());
+        keyStore.load(new FileInputStream(userKeyStore), keyPassphrase.toCharArray());
 
 
         SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(new SSLContextBuilder()
-                .loadTrustMaterial(myTrustStore, new TrustSelfSignedStrategy())
+                .loadTrustMaterial(null, new TrustSelfSignedStrategy())
                 .loadKeyMaterial(keyStore, keyPassphrase.toCharArray()).build(),
                 NoopHostnameVerifier.INSTANCE);
 
@@ -213,19 +224,14 @@ public class DoorControllerTest {
         KeyStore keyStore = KeyStore.getInstance("JKS");
         String userKeyStore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
                 "Backend/security/src/main/resources/nt-gateway.jks";
-        String userKeyStoreNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/nt-gateway.jks";
-        keyStore.load(new FileInputStream(userKeyStoreNB), keyPassphrase.toCharArray());
+        keyStore.load(new FileInputStream(userKeyStore), keyPassphrase.toCharArray());
 
-        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        myTrustStore.load(new FileInputStream(userKeyStoreNB), keyPassphrase.toCharArray());
 
         SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(new SSLContextBuilder()
-                .loadTrustMaterial(myTrustStore, new TrustSelfSignedStrategy())
+                .loadTrustMaterial(null, new TrustSelfSignedStrategy())
                 .loadKeyMaterial(keyStore, keyPassphrase.toCharArray()).build(),
                 NoopHostnameVerifier.INSTANCE);
 
         return HttpClients.custom().setSSLSocketFactory(socketFactory).build();
     }
-
 }
