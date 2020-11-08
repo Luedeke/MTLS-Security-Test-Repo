@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="Backend/dependency/application/src/main/java"/>
+	<classpathentry kind="src" path="Backend/dependency/application/src/test/java"/>
+	<classpathentry kind="src" path="Backend/dependency/inquiry/src/main/java"/>
+	<classpathentry kind="src" path="Backend/dependency/notifications/src/main/java"/>
+	<classpathentry kind="src" path="Backend/mapping/src/main/java"/>
+	<classpathentry kind="src" path="Backend/mapping/src/test/java"/>
+	<classpathentry kind="src" path="Backend/retry/.mvn/wrapper"/>
+	<classpathentry kind="src" path="Backend/retry/src/main/java"/>
+	<classpathentry kind="src" path="Backend/retry/src/test/java"/>
+	<classpathentry kind="src" path="Backend/security/src/main/java"/>
+	<classpathentry kind="src" path="Backend/security/src/test/java"/>
+	<classpathentry kind="lib" path="Backend/dependency/gradle/wrapper/gradle-wrapper.jar"/>
+	<classpathentry kind="lib" path="Backend/mapping/gradle/wrapper/gradle-wrapper.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
