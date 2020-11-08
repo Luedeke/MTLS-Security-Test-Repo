@@ -1,10 +1,6 @@
 package com.mhp.coding.challenges.auth.inbound;
 
-import lombok.SneakyThrows;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -12,7 +8,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
@@ -29,15 +24,31 @@ import java.io.FileInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class DoorControllerTest1234 {
+public class DoorControllerTestWithCertificates {
 
     private static final String DOOR_ENDPOINT = "https://127.0.0.1:8090/v1/door";
+
+    private static final String HEADER_CONTENT_TYPE = "content-type";
+    private static final String HEADER_CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
     private static final String DOOR_TO_CHANGE = "{\"id\":1,\"state\":\"UNLOCKED\"}";
     private static final String RESPONSE_DOOR_TO_CHANGE = "\"id\":1,\"type\":\"fireproof\"," +
             "\"location\":\"Basement 5.3\",\"state\":\"UNLOCKED\"";
 
-    @SneakyThrows
+    private static final String KEY_PASSPHRASE = "123456";
+
+    // Keystores for 3 different Roles
+    private static final String USER_KEY_STORE = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
+            "Backend/security/src/main/resources/client-user.jks";
+    private static final String USER_KEY_STORE_NB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
+            "Backend/security/src/main/resources/client-user.jks";
+
+    private static final String ADMIN_KEYS_TORE = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
+            "Backend/security/src/main/resources/client-admin.jks";
+
+    private static final String GATEWAY_KEY_STORE = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
+            "Backend/security/src/main/resources/nt-gateway.jks";
+
     @Test
     public void test_get_all_doors_accept_admin_role() throws Exception {
 
@@ -56,7 +67,6 @@ public class DoorControllerTest1234 {
         assertTrue(content.contains("Office 3.1.2"));
     }
 
-    @SneakyThrows
     @Test
     public void test_get_all_doors_accept_user_role() throws Exception {
 
@@ -75,12 +85,11 @@ public class DoorControllerTest1234 {
         assertTrue(content.contains("Office 3.1.2"));
     }
 
-    @SneakyThrows
     @Test
     public void test_change_door_state_accept_admin_role() throws Exception {
         // #Arrange
         HttpPost request = new HttpPost(DOOR_ENDPOINT);
-        request.addHeader("content-type", "application/json");
+        request.addHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_APPLICATION_JSON);
         StringEntity jsonEntity = new StringEntity(DOOR_TO_CHANGE);
         request.setEntity(jsonEntity);
 
@@ -94,12 +103,11 @@ public class DoorControllerTest1234 {
         assertTrue(content.contains(RESPONSE_DOOR_TO_CHANGE));
     }
 
-    @SneakyThrows
     @Test
     public void test_change_door_state_revoke_user_role() throws Exception {
         // #Arrange
         HttpPost request = new HttpPost(DOOR_ENDPOINT);
-        request.addHeader("content-type", "application/json");
+        request.addHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_APPLICATION_JSON);
         StringEntity jsonEntity = new StringEntity(DOOR_TO_CHANGE);
         request.setEntity(jsonEntity);
 
@@ -111,34 +119,23 @@ public class DoorControllerTest1234 {
         assertEquals(403, response.getStatusLine().getStatusCode());
     }
 
-    @SneakyThrows
-    @Test
+    @Test(expected=SSLHandshakeException.class)
     public void test_change_door_state_revoke_unknown_certificate() throws Exception {
         // #Arrange
         HttpPost request = new HttpPost(DOOR_ENDPOINT);
-        request.addHeader("content-type", "application/json");
+        request.addHeader(HEADER_CONTENT_TYPE, HEADER_CONTENT_TYPE_APPLICATION_JSON);
         StringEntity jsonEntity = new StringEntity(DOOR_TO_CHANGE);
         request.setEntity(jsonEntity);
 
         // #Act
         HttpClient httpClient = getSSLHttpClientWithUnknownUserCertificate();
-        HttpResponse response = httpClient.execute(request);
-
-        // #Assert
-        assertEquals(401, response.getStatusLine().getStatusCode());
+        httpClient.execute(request);
     }
 
-
-    @SneakyThrows
     @Test(expected=SSLHandshakeException.class)
     public void test_get_all_doors_accept_all_cert_should_fail() throws Exception {
-        String keyPassphrase = "123456";
         KeyStore keyStore = KeyStore.getInstance("JKS");
-        String keyStoreUser = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-user.jks";
-        String keyStoreUserNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-user.jks";
-        keyStore.load(new FileInputStream(keyStoreUser), keyPassphrase.toCharArray());
+        keyStore.load(new FileInputStream(USER_KEY_STORE), KEY_PASSPHRASE.toCharArray());
 
         // Create a trust manager that does not validate certificate chains
         TrustManager[] trustAllCerts = new TrustManager[] {
@@ -167,51 +164,15 @@ public class DoorControllerTest1234 {
 
     private HttpClient getSSLHttpClientWithAdminRole() throws KeyStoreException, IOException, NoSuchAlgorithmException,
             CertificateException, KeyManagementException, UnrecoverableKeyException {
-        String adminKeySTore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-admin.jks";
         String keyStoreUserNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-user.jks";
-
-        // truststore
-        /*
-        KeyStore trustStore = KeyStore.getInstance("JKS";
-        trustStore.load(new FileInputStream(adminKeySTore), "123456".toCharArray());
-        String alg = KeyManagerFactory.getDefaultAlgorithm();
-        TrustManagerFactory fac = TrustManagerFactory.getInstance(alg);
-        fac.init(trustStore);
-        */
-
-
-        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        myTrustStore.load(new FileInputStream(keyStoreUserNB), "password".toCharArray());
-
-        String keyPassphrase = "123456";
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(new FileInputStream(keyStoreUserNB), keyPassphrase.toCharArray());
-
-        SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(new SSLContextBuilder()
-                .loadTrustMaterial(myTrustStore, new TrustSelfSignedStrategy())
-                .loadKeyMaterial(keyStore, keyPassphrase.toCharArray()).build(),
-                NoopHostnameVerifier.INSTANCE);
-
-        return HttpClients.custom().setSSLSocketFactory(socketFactory).build();
+                "Backend/security/src/main/resources/client-admin.jks";
+        return getHttpClient(ADMIN_KEYS_TORE);
     }
+
 
     private HttpClient getSSLHttpClientWithUserRole() throws KeyStoreException, IOException, NoSuchAlgorithmException,
             CertificateException, KeyManagementException, UnrecoverableKeyException {
-        String keyPassphrase = "123456";
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        String userKeyStore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
-                "Backend/security/src/main/resources/client-user.jks";
-        keyStore.load(new FileInputStream(userKeyStore), keyPassphrase.toCharArray());
-
-
-        SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(new SSLContextBuilder()
-                .loadTrustMaterial(null, new TrustSelfSignedStrategy())
-                .loadKeyMaterial(keyStore, keyPassphrase.toCharArray()).build(),
-                NoopHostnameVerifier.INSTANCE);
-
-        return HttpClients.custom().setSSLSocketFactory(socketFactory).build();
+        return getHttpClient(USER_KEY_STORE);
     }
 
     /**
@@ -220,16 +181,25 @@ public class DoorControllerTest1234 {
      */
     private HttpClient getSSLHttpClientWithUnknownUserCertificate() throws KeyStoreException, IOException, NoSuchAlgorithmException,
             CertificateException, KeyManagementException, UnrecoverableKeyException {
-        String keyPassphrase = "123456";
-        KeyStore keyStore = KeyStore.getInstance("JKS");
-        String userKeyStore = "C:/Users/Nils-Desktop/Google Drive/MHP/coding-challenges/" +
+        String userKeyStoreNB = "C:/Users/Nils-NB/Google Drive/MHP/coding-challenges/" +
                 "Backend/security/src/main/resources/nt-gateway.jks";
-        keyStore.load(new FileInputStream(userKeyStore), keyPassphrase.toCharArray());
+        return getHttpClient(GATEWAY_KEY_STORE);
+    }
 
+    private HttpClient getHttpClient(String adminKeySTore) throws KeyStoreException, IOException,
+            NoSuchAlgorithmException, CertificateException,
+            KeyManagementException, UnrecoverableKeyException {
+
+        //KeyStore for Client
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(new FileInputStream(adminKeySTore), KEY_PASSPHRASE.toCharArray());
+        // TrustStore for Client
+        KeyStore myTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        myTrustStore.load(new FileInputStream(adminKeySTore), KEY_PASSPHRASE.toCharArray());
 
         SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(new SSLContextBuilder()
-                .loadTrustMaterial(null, new TrustSelfSignedStrategy())
-                .loadKeyMaterial(keyStore, keyPassphrase.toCharArray()).build(),
+                .loadTrustMaterial(myTrustStore, new TrustSelfSignedStrategy())
+                .loadKeyMaterial(keyStore, KEY_PASSPHRASE.toCharArray()).build(),
                 NoopHostnameVerifier.INSTANCE);
 
         return HttpClients.custom().setSSLSocketFactory(socketFactory).build();
